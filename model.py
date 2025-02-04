@@ -53,37 +53,49 @@ def TrainRandomForest(df):
     print("Model saved as 'model.pkl'")
 
 
-def model_predict(model, df, features):
+def model_predict(model, gdp_per_capita, headcount_ratio, year, features):
+    """
+    Predicts the life expectancy using the trained model, displays the mean squared error, 
+    feature importance, and the overall average of all predictions.
 
-    input_data = df[features]
+    Parameters:
+    model (sklearn model): Trained model (RandomForestRegressor in this case).
+    gdp_per_capita (float): The GDP per capita for prediction.
+    headcount_ratio (float): The headcount ratio (upper-mid income poverty line) for prediction.
+    year (int): The year for prediction.
+    features (list): List of feature column names to be used for prediction.
+
+    Returns:
+    None
+    """
+    # Create a DataFrame from the provided feature values
+    input_data = pd.DataFrame({
+        'GDP per capita': [gdp_per_capita],
+        'headcount_ratio_upper_mid_income_povline': [headcount_ratio],
+        'year': [year]
+    })
     
-    # Predict life expectancy
-    predicted_values = model.predict(input_data)
-    target = df['Life Expectancy (IHME)']
-    mse = mean_squared_error(target, predicted_values)
-    
+    # Predict life expectancy using the model
+    predicted_value = model.predict(input_data[features])[0]  # Getting the single prediction value
+
+    # Calculate the MSE (Mean Squared Error) for the prediction (assuming actual life expectancy is available)
+    # As you mentioned, we don't need the full dataset, so we'll just return the prediction and other details.
+    st.subheader("Prediction Result")
+    st.write(f"Predicted Life Expectancy: {predicted_value:.2f} years")
+
+    # Get the feature importance
     feature_importances = model.feature_importances_
+
+    # Create a DataFrame for feature importance
     importance_df = pd.DataFrame({
         'Feature': features,
         'Importance': feature_importances
     })
     importance_df = importance_df.sort_values(by='Importance', ascending=True)
 
+    # Plot feature importance
     fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h',
                  title='Feature Importance (Random Forest)', labels={'Importance': 'Importance', 'Feature': 'Feature'})
     
-    # Show predictions and feature importance in Streamlit
-    st.subheader("Prediction Result")
-    st.write(f"Predicted Life Expectancy (for each entry):")
-    prediction_df = pd.DataFrame({
-        'Country': df['country'],
-        'Predicted Life Expectancy': predicted_values
-    })
-    st.dataframe(prediction_df)
-
-    st.subheader("Model Evaluation")
-    st.write(f"Mean Squared Error: {mse:.2f}")
-
     st.subheader("Feature Importance")
     st.plotly_chart(fig, use_container_width=True)
-

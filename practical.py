@@ -57,21 +57,17 @@ with tab1:
         
     features = ['GDP per capita', 'headcount_ratio_upper_mid_income_povline', 'year']
     
-    # Get user input for features
+    # Collect the input features using a list (not a dictionary)
+    features = ['GDP per capita', 'headcount_ratio_upper_mid_income_povline', 'year']
+
+    # Allow user to input feature values
     gdp_per_capita = st.number_input("Enter GDP per capita", min_value=0, step=100, format="%d")
     headcount_ratio = st.number_input("Enter Headcount Ratio (Upper-Mid Income Poverty Line)", min_value=0.0, step=0.01, format="%.2f")
     year = st.number_input("Enter Year", min_value=2000, max_value=2023, step=1)
 
-    # Collect the input features
-    features = {
-        'GDP per capita': gdp_per_capita,
-        'headcount_ratio_upper_mid_income_povline': headcount_ratio,
-        'year': year
-    }
-
     # Button to make prediction
     if st.button("Predict Life Expectancy"):
-        model_predict(model, df, features)
+        model_predict(model, gdp_per_capita, headcount_ratio, year, features)
 with tab2:
     pass
 with tab3:
