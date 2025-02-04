@@ -58,14 +58,34 @@ with tab1:
     
 with tab2:
     st.subheader("Country Deep Dive")
-    
     countrieslist = df["country"].dropna().unique().tolist()
-    country = st.multiselect(
-        "Select country",
-        countrieslist
-    )
-    filtered_df = df[df["country"].isin(country)]
+    country = st.selectbox("Select country", countrieslist)
+    # Filter the dataset based on the selected country
+    filtered_df = df[df["country"] == country]
+    
+    # Latest statistics for selected country
+    st.subheader("Latest Statistics")
+    if not filtered_df.empty:
+        latest_values = filtered_df.sort_values("year").groupby("country").last().reset_index()
+
+        for _, row in latest_values.iterrows():
+            st.subheader(f"Latest Data for {row['country']}")
+            st.write(f"**Life Expectancy (IHME):** {row['Healthy Life Expectancy (IHME)']:.2f} years")
+            st.write(f"**GDP per Capita:** ${row['GDP per capita']:,.2f}")
+            st.markdown("---")
+    else:
+        st.warning("No data available for the selected country.")
+
+    # Year slider for selecting the year
+    min_year, max_year = int(df["year"].min()), int(df["year"].max())
+    selected_year = st.slider("Select Year", min_year, max_year, max_year)
+
+    # Filter the dataset for the selected year
+    year_filtered_df = filtered_df[filtered_df["year"] == selected_year]
+
+    # Plot Life Expectancy and GDP per Capita over time
     fig = go.Figure()
+
     fig.add_trace(go.Scatter(
         x=filtered_df["year"],
         y=filtered_df["Healthy Life Expectancy (IHME)"],
@@ -73,6 +93,7 @@ with tab2:
         name="Life Expectancy",
         line=dict(width=2, color="blue"),
     ))
+
     fig.add_trace(go.Scatter(
         x=filtered_df["year"],
         y=filtered_df["GDP per capita"],
@@ -81,8 +102,9 @@ with tab2:
         line=dict(width=2, color="red"),
         yaxis="y2"
     ))
+
     fig.update_layout(
-        title=f"Life Expectancy & GDP per Capita in {filtered_df}",
+        title=f"Life Expectancy & GDP per Capita in {country}",
         xaxis_title="Year",
         yaxis=dict(title="Life Expectancy (Years)", side="left"),
         yaxis2=dict(
@@ -93,10 +115,55 @@ with tab2:
         ),
         legend=dict(x=0.1, y=1.1)
     )
+
     st.plotly_chart(fig, use_container_width=True)
 
-    
+    # Statistics shown based on slider
+    if not year_filtered_df.empty:
+        row = year_filtered_df.iloc[0]
+        st.subheader(f"Data for {row['country']} in {selected_year}")
+        st.write(f"**Life Expectancy (IHME):** {row['Healthy Life Expectancy (IHME)']:.2f} years")
+        st.write(f"**GDP per Capita:** ${row['GDP per capita']:,.2f}")
+    else:
+        st.warning(f"No data available for the selected year ({selected_year}).")
 
+    features = ["GDP per capita", "Healthy Life Expectancy (IHME)", "headcount_ratio_upper_mid_income_povline"]
+    for feature in features:
+        fig = go.Figure()
+        year_filtered_df_world = df[df["year"] == selected_year]
+        # World distribution for the feature in the selected year
+        fig.add_trace(go.Histogram(
+            x=year_filtered_df_world[feature],
+            nbinsx=30,  
+            name=f"World Distribution of {feature}",
+            marker_color='lightblue',
+            opacity=0.7,
+            histnorm='probability density'  
+        ))
+        # Add the red triangle for the selected country
+        fig.add_trace(go.Scatter(
+            x=[year_filtered_df[feature].iloc[0]],  
+            y=[0],  # Set y to 0 to show the triangle at the bottom
+            mode='markers',
+            name=f"{country} ({feature})",
+            marker=dict(
+                symbol='triangle-up',
+                color='red',
+                size=12
+            ),
+            showlegend=True
+        ))
+        fig.update_layout(
+            title=f"{feature} Distribution in {country} ({selected_year})",
+            xaxis_title=feature,
+            yaxis_title="Density",
+            xaxis=dict(showgrid=True),
+            yaxis=dict(showgrid=True),
+            showlegend=True,
+            template="plotly_white"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+  
 with tab3:
     unique_countries = df["country"].dropna().unique().tolist()
 
