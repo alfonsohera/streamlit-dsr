@@ -1,5 +1,6 @@
 import plotly.express as px
 
+
 def create_scatter_plot(filtered_df, selected_year):
     # Ensure the DataFrame is not empty before plotting
     if filtered_df.empty:

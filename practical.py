@@ -3,6 +3,9 @@ import pandas as pd
 import requests
 import plotly.express as px
 from plots import create_scatter_plot
+from model import model_predict
+import pickle
+from sklearn.metrics import mean_squared_error
 
 url = "https://raw.githubusercontent.com/JohannaViktor/streamlit_practical/refs/heads/main/global_development_data.csv"
 
@@ -43,11 +46,32 @@ with tab1:
     with col4: 
         st.metric(label="Number of Countries", value=num_countries)
     pass
-    
+
     # Create scatter plot
     fig = create_scatter_plot(filtered_df, selected_year)
     st.plotly_chart(fig, use_container_width=True)
 
+    #Evaluate model
+    with open('model.pkl', 'rb') as model_file:
+        model = pickle.load(model_file)
+        
+    features = ['GDP per capita', 'headcount_ratio_upper_mid_income_povline', 'year']
+    
+    # Get user input for features
+    gdp_per_capita = st.number_input("Enter GDP per capita", min_value=0, step=100, format="%d")
+    headcount_ratio = st.number_input("Enter Headcount Ratio (Upper-Mid Income Poverty Line)", min_value=0.0, step=0.01, format="%.2f")
+    year = st.number_input("Enter Year", min_value=2000, max_value=2023, step=1)
+
+    # Collect the input features
+    features = {
+        'GDP per capita': gdp_per_capita,
+        'headcount_ratio_upper_mid_income_povline': headcount_ratio,
+        'year': year
+    }
+
+    # Button to make prediction
+    if st.button("Predict Life Expectancy"):
+        model_predict(model, df, features)
 with tab2:
     pass
 with tab3:
