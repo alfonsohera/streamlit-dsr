@@ -43,18 +43,7 @@ with tab1:
     with col4: 
         st.metric(label="Number of Countries", value=num_countries)
     pass
-    #Scatter plot
-
-    # Normalize bubble size manually
-    min_bubble_size = 2  # Set a minimum bubble size
-    max_bubble_size = 50  # Set a maximum bubble size
-
-    # Normalize population values to be within min and max range
-    filtered_df["bubble_size"] = (
-        (filtered_df["Population"] - filtered_df["Population"].min()) /
-        (filtered_df["Population"].max() - filtered_df["Population"].min())
-    ) * (max_bubble_size - min_bubble_size) + min_bubble_size
-
+    
     # Create scatter plot
     fig = create_scatter_plot(filtered_df, selected_year)
     st.plotly_chart(fig, use_container_width=True)
