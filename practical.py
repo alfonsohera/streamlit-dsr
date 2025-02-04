@@ -13,23 +13,25 @@ url = "https://raw.githubusercontent.com/JohannaViktor/streamlit_practical/refs/
 df = pd.read_csv(url)
 
 st.title("Worldwide Analysis of Quality of Life and Economic Factors")
-st.write("This app enables you to explore the relationships between poverty, \
-            life expectancy, and GDP across various countries and years. \
-            Use the panels to select options and interact with the data.")
-tab1,tab2,tab3,tab4 = st.tabs(["Global Overview", "Country Deep Dive", "Data Explorer","Predictions"])
+st.write("This app enables you to explore the relationships between poverty, life expectancy, and GDP across various countries and years. Use the panels to select options and interact with the data.")
+
+# Global selection of year with a sidebar
 overall_min_year, overall_max_year = int(df["year"].min()), int(df["year"].max())
+selected_year = st.sidebar.slider(
+    "Select Year",
+    min_value=overall_min_year,
+    max_value=overall_max_year,
+    value=overall_max_year
+)
+
+tab1, tab2, tab3, tab4 = st.tabs(["Global Overview", "Country Deep Dive", "Data Explorer", "Predictions"])
+
+# Global Overview Tab
 with tab1:
-    
-    #Slider to select year
-    st.subheader("Global overview")
-    selected_year = st.slider(
-        "Select year range for visualization:",
-        min_value=overall_min_year,
-        max_value=overall_max_year,
-        value=(overall_min_year))
-    # Filter dataset based on selected year range and countries
-    filtered_df = df[(df["year"] == selected_year)]
-    col1,col2,col3,col4  = st.columns(4)
+    st.subheader("Global Overview")
+
+    # Filter dataset based on selected year
+    filtered_df = df[df["year"] == selected_year]
 
     # Calculate required statistics
     mean_life_exp = filtered_df["Life Expectancy (IHME)"].mean()
@@ -37,37 +39,34 @@ with tab1:
     mean_upper_mid_income_povline = filtered_df["headcount_ratio_upper_mid_income_povline"].mean()
     num_countries = filtered_df["country"].nunique()
 
-    #Metric tabs
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-         st.metric(label="Mean Life Expectancy", value=round(mean_life_exp, 2))
+        st.metric(label="Mean Life Expectancy", value=round(mean_life_exp, 2))
     with col2:
         st.metric(label="Median GDP per Capita", value=f"${round(median_gdp_per_capita, 2):,}")
     with col3:
         st.metric(label="Mean Upper-Mid Income Poverty Ratio", value=round(mean_upper_mid_income_povline, 2))
-    with col4: 
+    with col4:
         st.metric(label="Number of Countries", value=num_countries)
-    pass
 
-    # Create scatter plot
+    # Create scatter plot for Global Overview
     fig = create_scatter_plot(filtered_df, selected_year)
     st.plotly_chart(fig, use_container_width=True)
 
-    #Evaluate model
-    with open('model.pkl', 'rb') as model_file:
-        model = pickle.load(model_file)        
-    
+# Country Deep Dive Tab
 with tab2:
     st.subheader("Country Deep Dive")
+
     countrieslist = df["country"].dropna().unique().tolist()
-    country = st.selectbox("Select country", countrieslist)
-    # Filter the dataset based on the selected country
+    country = st.selectbox("Select Country", countrieslist)
+
+    # Filter dataset for the selected country
     filtered_df = df[df["country"] == country]
-    
-    # Latest statistics for selected country
+
+    # Display latest statistics for selected country
     st.subheader("Latest Statistics")
     if not filtered_df.empty:
         latest_values = filtered_df.sort_values("year").groupby("country").last().reset_index()
-
         for _, row in latest_values.iterrows():
             st.subheader(f"Latest Data for {row['country']}")
             st.write(f"**Life Expectancy (IHME):** {row['Healthy Life Expectancy (IHME)']:.2f} years")
@@ -76,16 +75,11 @@ with tab2:
     else:
         st.warning("No data available for the selected country.")
 
-    # Year slider for selecting the year
-    min_year, max_year = int(df["year"].min()), int(df["year"].max())
-    selected_year = st.slider("Select Year", min_year, max_year, max_year)
-
-    # Filter the dataset for the selected year
+    # Filter dataset for the selected year
     year_filtered_df = filtered_df[filtered_df["year"] == selected_year]
 
     # Plot Life Expectancy and GDP per Capita over time
     fig = go.Figure()
-
     fig.add_trace(go.Scatter(
         x=filtered_df["year"],
         y=filtered_df["Healthy Life Expectancy (IHME)"],
@@ -93,7 +87,6 @@ with tab2:
         name="Life Expectancy",
         line=dict(width=2, color="blue"),
     ))
-
     fig.add_trace(go.Scatter(
         x=filtered_df["year"],
         y=filtered_df["GDP per capita"],
@@ -115,10 +108,9 @@ with tab2:
         ),
         legend=dict(x=0.1, y=1.1)
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
-    # Statistics shown based on slider
+    # Display statistics for selected year
     if not year_filtered_df.empty:
         row = year_filtered_df.iloc[0]
         st.subheader(f"Data for {row['country']} in {selected_year}")
@@ -127,10 +119,12 @@ with tab2:
     else:
         st.warning(f"No data available for the selected year ({selected_year}).")
 
+    # Histograms for the selected country and year
     features = ["GDP per capita", "Healthy Life Expectancy (IHME)", "headcount_ratio_upper_mid_income_povline"]
     for feature in features:
         fig = go.Figure()
         year_filtered_df_world = df[df["year"] == selected_year]
+
         # World distribution for the feature in the selected year
         fig.add_trace(go.Histogram(
             x=year_filtered_df_world[feature],
@@ -138,11 +132,12 @@ with tab2:
             name=f"World Distribution of {feature}",
             marker_color='lightblue',
             opacity=0.7,
-            histnorm='probability density'  
+            histnorm='probability density'  # Normalized histogram to show relative frequencies
         ))
+
         # Add the red triangle for the selected country
         fig.add_trace(go.Scatter(
-            x=[year_filtered_df[feature].iloc[0]],  
+            x=[year_filtered_df[feature].iloc[0]],  # First row's feature value
             y=[0],  # Set y to 0 to show the triangle at the bottom
             mode='markers',
             name=f"{country} ({feature})",
@@ -163,13 +158,10 @@ with tab2:
             template="plotly_white"
         )
         st.plotly_chart(fig, use_container_width=True)
-  
-with tab3:
-    unique_countries = df["country"].dropna().unique().tolist()
 
-    # Get overall min and max years
+# Data Explorer Tab
+with tab3:
     st.subheader("Data Explorer")
-    st.write("This is the complete dataset:")
 
     # Allow user to define min and max year range
     selected_year_range = st.slider(
@@ -182,14 +174,14 @@ with tab3:
     # Country multiselect
     selected_countries = st.multiselect(
         "Select countries",
-        unique_countries,
+        df["country"].dropna().unique().tolist(),
     )
 
     # Filter dataset based on selected year range and countries
     filtered_df = df[
         (df["year"].between(*selected_year_range)) & (df["country"].isin(selected_countries))
     ]
-
+    
     st.dataframe(filtered_df)
 
     # Convert filtered DataFrame to CSV
@@ -202,6 +194,8 @@ with tab3:
         file_name=f"filtered_data_{selected_year_range[0]}_{selected_year_range[1]}.csv",
         mime="text/csv"
     )
+
+# Predictions Tab
 with tab4:
     features = ['GDP per capita', 'headcount_ratio_upper_mid_income_povline', 'year']
 
